@@ -1,15 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { LiFiWidget, WidgetDrawer } from '@lifi/widget';
 import { useTheme } from 'next-themes';
 import { ArrowRight, CreditCard, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-
-// Simplified version without type declarations for window.ethereum
-// We'll use type assertions instead to avoid conflicts
 
 export const PaymentCheckout = () => {
   const router = useRouter();
@@ -18,78 +15,10 @@ export const PaymentCheckout = () => {
   const isDarkTheme = currentTheme === 'dark';
   
   const [selectedMethod, setSelectedMethod] = useState<'card' | 'crypto' | null>(null);
-  const [isLifiOpen, setIsLifiOpen] = useState(false);
   const drawerRef = useRef<WidgetDrawer>(null);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  
-  // Check if window.ethereum is available (MetaMask is installed)
-  const isMetaMaskInstalled = () => {
-    return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined';
-  };
-
-  // Connect to MetaMask wallet
-  const connectWallet = async () => {
-    if (!isMetaMaskInstalled()) {
-      window.open('https://metamask.io/download/', '_blank');
-      return;
-    }
-
-    setIsConnecting(true);
-    try {
-      // Request account access
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ethereum = window.ethereum as any;
-      const accounts = await ethereum.request({ 
-        method: 'eth_requestAccounts' 
-      }) as string[];
-      
-      if (accounts && accounts.length > 0) {
-        setWalletAddress(accounts[0]);
-      }
-    } catch (error) {
-      console.error('Error connecting to MetaMask:', error);
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  // Listen for account changes
-  useEffect(() => {
-    if (isMetaMaskInstalled()) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ethereum = window.ethereum as any;
-      
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length === 0) {
-          // User disconnected their wallet
-          setWalletAddress(null);
-        } else {
-          setWalletAddress(accounts[0]);
-        }
-      };
-
-      ethereum.on('accountsChanged', handleAccountsChanged);
-
-      // Check if already connected
-      ethereum.request({ method: 'eth_accounts' })
-        .then((accounts: unknown) => {
-          const addressArray = accounts as string[];
-          if (addressArray.length > 0) {
-            setWalletAddress(addressArray[0]);
-          }
-        })
-        .catch(console.error);
-
-      return () => {
-        ethereum.removeListener('accountsChanged', handleAccountsChanged);
-      };
-    }
-  }, []);
   
   const toggleLifiWidget = () => {
     drawerRef.current?.toggleDrawer();
-    setIsLifiOpen(!isLifiOpen);
   };
 
   const handleContinuePayment = () => {
@@ -98,11 +27,6 @@ export const PaymentCheckout = () => {
     } else if (selectedMethod === 'card') {
       router.push('/card-payment');
     }
-  };
-
-  // Format wallet address for display
-  const formatWalletAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -125,13 +49,7 @@ export const PaymentCheckout = () => {
             <span className="font-medium">COINK Checkout</span>
           </div>
           
-          <button 
-            onClick={connectWallet}
-            disabled={isConnecting}
-            className={`text-sm font-medium ${walletAddress ? 'bg-primary/10 text-primary px-3 py-1 rounded-full' : 'text-primary hover:text-primary/80'} transition-colors`}
-          >
-            {isConnecting ? 'Connecting...' : walletAddress ? formatWalletAddress(walletAddress) : 'Connect Wallet'}
-          </button>
+          <div className="w-24"></div> {/* Spacer for centering */}
         </div>
       </header>
 
@@ -293,11 +211,6 @@ export const PaymentCheckout = () => {
               324, 59144, 1101
             ],
           },
-          walletConfig: {
-            onConnect: connectWallet
-          },
-          routePriority: "RECOMMENDED",
-          slippage: 1,
         }}
       />
     </div>
